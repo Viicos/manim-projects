@@ -7,6 +7,31 @@ import numpy as np
 import math
 import os
 
+class Test(Scene):
+    def construct(self):
+        esint_template = TexTemplate()
+        esint_template.add_to_preamble(r'\usepackage{esint}')
+        flux_el_t1 = MathTex(
+            r"{{\delta\Phi=}} {{\overrightarrow{E} . \overrightarrow{\mathrm{d^2S}}}}",
+            tex_template=esint_template,
+            tex_to_color_map={
+                r"\overrightarrow{E}": "#FCBA03"
+            }
+        )
+        flux_el_t1_int = MathTex(
+            r"\iint_S {{\delta\Phi=}} \iint_S {{\overrightarrow{E} . \overrightarrow{\mathrm{d^2S}}}}",
+            tex_template=esint_template,
+            tex_to_color_map={
+                r"\overrightarrow{E}": "#FCBA03"
+            }
+        )
+        self.add(flux_el_t1)
+        self.play(
+            TransformMatchingTex(flux_el_t1, flux_el_t1_int)
+        )
+        self.wait()
+
+
 class DensiteGlissante(ThreeDScene):
     @staticmethod
     def get_random_coords(x_range, distance=0.4):
@@ -602,7 +627,7 @@ class ExplainFlux(ThreeDScene):
         ).shift(0.2 * OUT)
 
         ds = Arrow(0.2 * OUT, 1.8 * UP + 0.2 * OUT, buff=0)
-        ds_t1 = MathTex(r"\overrightarrow{\mathrm{d^2S}}=\mathrm{d^2S}\overrightarrow{e_y}").to_corner(UR).shift(LEFT)
+        ds_t1 = MathTex(r"\overrightarrow{\mathrm{d^2S}}=\mathrm{d^2S}\overrightarrow{e_y}").to_corner(UR)
 
         self.play(
             Write(surface),
@@ -630,10 +655,12 @@ class ExplainFlux(ThreeDScene):
             r"\Phi(\overrightarrow{E}) =",
             r"\iint_S \overrightarrow{E}\overrightarrow{\mathrm{d^2S}}",
             tex_template=esint_template,
-            tex_to_color_map={
-                "\overrightarrow{E}": "#FCBA03"
-            }
+            # tex_to_color_map={
+            #     "\overrightarrow{E}": "#FCBA03"
+            # }
         ).next_to(ds_t1, DOWN, aligned_edge=RIGHT)
+        flux_t[0][3:5].set_color("#FCBA03")
+        flux_t[1][3:5].set_color("#FCBA03")
 
         self.play(
             *map(Create, ex_field)
@@ -655,7 +682,7 @@ class ExplainFlux(ThreeDScene):
         self.wait()
 
         flux_el_t1 = MathTex(
-            r"\delta\Phi = \overrightarrow{E} . \overrightarrow{\mathrm{d^2S}}",
+            r"{{\delta\Phi =}} {{\overrightarrow{E} \overrightarrow{\mathrm{d^2S}}}}",
             tex_to_color_map={
                 r"\overrightarrow{E}": "#FCBA03"
             }
@@ -720,7 +747,7 @@ class ExplainFlux(ThreeDScene):
             r"\circ",
             color=GREEN_C
         ).next_to(cos_t, RIGHT).scale(1.2).shift(0.1 * UP)
-        deg_t.add_updater(lambda d: d.next_to(cos_t, RIGHT))
+        deg_t.add_updater(lambda d: d.next_to(cos_t, RIGHT).shift(0.1 * UP))
 
         self.add_fixed_in_frame_mobjects(cos_t, deg_t)
         self.play(
@@ -750,6 +777,8 @@ class ExplainFlux(ThreeDScene):
         self.wait(2)
         cos_value.clear_updaters()
         e_value.clear_updaters()
+        deg_t.clear_updaters()
+        cos_t.clear_updaters()
         self.play(
             *map(FadeOut, [cos_t, deg_t, cos_value, e_value, flux_el_t2, flux_el_t3]),
             Rotate(ex_arrow, -180 * DEGREES, axis=RIGHT, about_point=ex_arrow.get_start())
@@ -767,10 +796,13 @@ class ExplainFlux(ThreeDScene):
             self.play(ds_grp.animate.shift(0.15 * RIGHT), run_time=0.065)
         self.play(ds_grp.animate.set_opacity(0), run_time=0.2)
 
+        self.wait()
+
         self.play(
-            *map(Create, ex_field)
+            *map(Create, ex_field),
+            FadeOut(flux_el_t1),
+            FadeIn(flux_t)
         )
-        ds.shift(0.2 * IN)
 
         flux_vt = ValueTracker(10)
 
@@ -779,13 +811,46 @@ class ExplainFlux(ThreeDScene):
             num_decimal_places=1,
             include_sign=True
         )
-        flux_value.next_to(flux_t.get_part_by_tex("="), RIGHT)
+        flux_value.next_to(flux_t[0], RIGHT).shift(0.08*DOWN)
         flux_value.add_updater(lambda d: d.set_value(flux_vt.get_value()))
-        flux_value.add_updater(lambda d: self.add_fixed_in_frame_mobjects(d))
-        self.add_fixed_in_frame_mobjects(flux_value)
+        ua_t = MathTex(r"\mathrm{u.a.}").next_to(flux_value)
+        self.add_fixed_in_frame_mobjects(flux_value, ua_t)
         self.play(
-            Create(ds),
             FadeIn(flux_value),
-            # FadeOut(flux_t.get_part_by_tex)
+            FadeOut(flux_t[1]),
+            FadeIn(ua_t)
+        )
+        flux_value.add_updater(lambda d: self.add_fixed_in_frame_mobjects(d))
+
+        self.wait()
+
+        self.play(
+            flux_vt.animate.set_value(15),
+            *[arr.animate.put_start_and_end_on(arr.get_start(), arr.get_end() + UP) for arr in ex_field],
+            run_time=2
         )
         self.wait()
+        self.play(
+            flux_vt.animate.set_value(10),
+            *[arr.animate.put_start_and_end_on(arr.get_start(), arr.get_end() - UP) for arr in ex_field],
+            run_time=2
+        )
+        self.wait()
+        self.play(
+            flux_vt.animate.set_value(8.5),
+            *[Rotate(arr, 20 * DEGREES, axis=RIGHT, about_point=arr.get_start()) for arr in ex_field],
+            run_time=2
+        )
+        self.wait()
+        self.play(
+            flux_vt.animate.set_value(0),
+            *[Rotate(arr, 70 * DEGREES, axis=RIGHT, about_point=arr.get_start()) for arr in ex_field],
+            run_time=2
+        )
+        self.wait()
+        self.play(
+            flux_vt.animate.set_value(-10),
+            *[Rotate(arr, 90 * DEGREES, axis=RIGHT, about_point=arr.get_start()) for arr in ex_field],
+            run_time=2
+        )
+        self.wait(2)

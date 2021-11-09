@@ -368,7 +368,9 @@ class Invariance(ThreeDScene):
 		]
 		circles_theta = circles[30].copy()
 
-		distribution_t = MathTex(r"\forall P \in \mathscr{S},\,\rho(P)=\rho_0\left(\frac{r}{R}\right)^2").to_corner(UL).scale(0.8)
+		distribution_t = MathTex(
+			r"\forall P \in \mathscr{S},\,\rho(P)=\rho_0\left(\frac{r}{R}\right)^2"
+		).to_corner(UL).scale(0.8)
 		self.add_fixed_in_frame_mobjects(distribution_t)
 
 		self.play(
