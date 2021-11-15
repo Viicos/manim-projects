@@ -5,7 +5,6 @@ from utils import *
 import random
 import numpy as np
 import math
-import os
 
 class Test(Scene):
     def construct(self):
@@ -235,7 +234,7 @@ class DensiteGlissanteZoom(ThreeDScene):
         )
         self.wait()
 
-class DistributionExample(ThreeDScene):
+class DistributionCarre(ThreeDScene):
     def construct(self):
         self.set_camera_orientation(
             phi=70 * DEGREES,
