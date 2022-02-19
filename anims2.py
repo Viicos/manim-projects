@@ -7,10 +7,6 @@ from manim import *
 from manim.utils.space_ops import cartesian_to_spherical, spherical_to_cartesian
 
 
-def CylindricToCartesian(point):  # point = (r, theta, z)
-    r, theta, z = point
-    return [r * np.cos(theta), r * np.sin(theta), z]
-
 class Test2(ThreeDScene):
     def construct(self):
         self.set_camera_orientation(
@@ -161,7 +157,7 @@ class GaussSquared(ThreeDScene):
 
         self.move_camera(
             zoom=0.89,
-            frame_center=(2, 0, 0),
+            frame_center=2 * X_AXIS,
             added_anims=[Create(gauss_sphere)]
         )
         self.wait()
@@ -656,7 +652,7 @@ class InvarianceTheta(ThreeDScene):
         
         def dashed_line_updater(l, dot):
             l.become(DashedLine(ORIGIN, dot.get_center()))
-        
+
         def theta_updater(a, vt):
             a.become(Arc(
                 radius=0.8,
@@ -929,5 +925,70 @@ class InvarianceTheta(ThreeDScene):
         self.wait(2)
         self.play(
             *map(FadeOut, [axes, sphere, m, m_t, *spheric_base, *spheric_base_t, pi2])
+        )
+        self.wait()
+
+class FilInfini(ThreeDScene):
+    def construct(self):
+        self.set_camera_orientation(
+            phi=70 * DEGREES,
+            theta=40 * DEGREES,
+            zoom=1.2
+        )
+
+        axes = ThreeDAxes().set_stroke(width=0.5)
+        x_label = axes.get_x_axis_label(label=r"\overrightarrow{e_x}")
+        y_label = axes.get_y_axis_label(label=r"\overrightarrow{e_y}").shift(2 * UP)
+        z_label = axes.get_z_axis_label(label=r"\overrightarrow{e_z}", rotation=0, buff=LARGE_BUFF)
+        cartesian_base_t = VGroup(x_label, y_label, z_label)
+        fil = Cylinder(
+            radius=0.2,
+            height=7,
+            fill_opacity=0.4,
+            resolution=(24, 12),
+            shade_in_3d=True
+        ).set_color(BLUE_E)
+        self.add_fixed_orientation_mobjects(x_label, y_label, z_label)
+        self.play(
+            Create(axes, run_time=0.8),
+            Create(fil),
+            *map(Write, cartesian_base_t)
+        )
+        self.wait()
+        
+        self.move_camera(
+            zoom=10
+        )
+        self.wait()
+
+        distribution_t = MathTex(r"\forall P \in \mathcal{F},\\ \rho(P)=\rho_0").move_to(3.5 * RIGHT)
+
+        circle = Circle(
+            radius=fil.radius,
+            fill_opacity=0.7,
+            # shade_in_3d=True
+        )
+        self.add_fixed_in_frame_mobjects(distribution_t)
+        self.play(
+            Succession(
+                FadeIn(distribution_t),
+                distribution_t.animate.to_corner(UR)
+            )
+        )
+        self.wait()
+        self.play(
+            Succession(
+                AnimationGroup(
+                    fil.animate.set_opacity(0.2),
+                    GrowFromCenter(circle)
+                ),
+                Wait(),
+                circle.animate.shift(0.2 * OUT),
+                circle.animate.shift(0.4 * IN),
+                AnimationGroup(
+                    fil.animate.set_opacity(0.4),
+                    FadeOut(circle)
+                )
+            )
         )
         self.wait()

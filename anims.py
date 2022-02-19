@@ -853,3 +853,579 @@ class ExplainFlux(ThreeDScene):
             run_time=2
         )
         self.wait(2)
+
+class Induction41(ThreeDScene):
+    def construct(self):
+        esint_template = TexTemplate()
+        esint_template.add_to_preamble(r"\usepackage{physics}")
+        esint_template.add_to_preamble(r"\usepackage{esint}")
+
+        self.set_camera_orientation(
+			phi =70 * DEGREES,
+			theta=30 * DEGREES
+		)
+        field_t = MathTex(
+            r"\overrightarrow{B}=B_0\cos\left(\frac{\pi r}{2R}\right)\cos(\omega t)\overrightarrow{e_z}",
+            tex_to_color_map={
+                r"\overrightarrow{B}": "#FCBA03"
+            }
+        )
+        self.add_fixed_in_frame_mobjects(field_t)
+        self.play(
+            FadeIn(field_t),
+            run_time=1.2
+        )
+        self.wait()
+        self.play(
+            field_t.animate.to_corner(UR).scale(0.8)
+        )
+        self.wait()
+
+        axes = ThreeDAxes()
+        cylinder = Cylinder(
+            radius=2,
+            height=8,
+            direction=Y_AXIS,
+            show_ends=False,
+            fill_opacity=0.7
+        )
+        y_label = axes.get_y_axis_label(label=r"\overrightarrow{e_z}").shift(2 * UP)
+        self.add_fixed_orientation_mobjects(y_label)
+        self.play(
+            FadeIn(axes),
+            FadeIn(cylinder),
+            Write(y_label)
+        )
+        self.wait()
+
+        b_arrows = [
+            Arrow(
+                start=np.roll(cylindric_to_cartesian((r, theta, z)), 2),
+                end=np.roll(cylindric_to_cartesian((r, theta, z + 2 * np.cos((PI * r) / (2 * cylinder.radius)))), 2),
+                buff=0,
+                color="#FCBA03",
+                stroke_opacity=0.5
+            )
+            for r in np.linspace(0.5, 1.5, 2)
+            for theta in np.linspace(0, TAU, 6)
+            for z in np.linspace(-3, 3, 3)
+        ]
+        for arrow in b_arrows:
+            arrow.original_length = arrow.get_length()
+        self.play(
+            *map(Create, b_arrows)
+        )
+        self.wait()
+
+        t_vt = ValueTracker()
+        t_value = DecimalNumber(num_decimal_places=1, unit="s").next_to(field_t, DOWN, aligned_edge=RIGHT)
+        t_t = MathTex("t=").next_to(t_value, LEFT, aligned_edge=DOWN)
+        t_value.add_updater(lambda t: t.set_value(t_vt.get_value()))
+        self.add_fixed_in_frame_mobjects(t_value, t_t)
+        self.play(
+            *map(lambda a: a.animate.set_opacity(1), b_arrows),
+            cylinder.animate.set_opacity(0.35),
+            FadeIn(t_value),
+            FadeIn(t_t)
+        )
+        t_value.add_updater(lambda t: self.add_fixed_in_frame_mobjects(t))
+
+        self.wait()
+
+
+        for arrow in b_arrows:
+            arrow.add_updater(
+                lambda a: a.become(
+                    Arrow(
+                        a.get_start(),
+                        a.get_start() + np.cos(2 * t_vt.get_value()) * a.original_length * UP,
+                        buff=0,
+                        color="#FCBA03"
+                    )
+                )
+            )
+        
+        # self.play(
+        #     t_vt.animate.set_value(10),
+        #     run_time=4,
+        #     rate_func=linear
+        # )
+        self.wait()
+        self.move_camera(
+			theta=200 * DEGREES,
+			phi=60 * DEGREES,
+			run_time=4 * PI,
+			rate_func=lambda t: smooth(t, inflection = 5.0),
+            added_anims=[t_vt.animate(rate_func=linear, run_time=4 * PI).set_value(4 * PI)]
+		)
+        self.wait(2)
+
+        circle = Circle(
+            radius=1.3,
+            stroke_width=4,
+            fill_opacity=0.45,
+            fill_color="#FCBA03",
+            stroke_color=GREEN
+        ).rotate(90 * DEGREES, axis=X_AXIS).shift(2.8 * DOWN)
+
+        gamma_t = MathTex(r"\Gamma", color=GREEN).move_to(3.5 * LEFT + 3 * DOWN)
+
+        ds = Arrow(2.8 * DOWN + 0.2 * OUT, 1.3 * DOWN + 0.2 * OUT, buff=0)
+        ds_t = MathTex(r"\overrightarrow{\mathrm{d^2S}}").next_to(ds.get_end() + 0.6 * OUT)
+
+        eq_t = MathTex(
+            r"e=\oint_{\Gamma}\overrightarrow{E}.\overrightarrow{\mathrm{dl}}=", r"-\dv{}{t}", r"\iint_S \overrightarrow{B}.\overrightarrow{\mathrm{d^2S}}",
+            tex_template=esint_template,
+            # tex_to_color_map={
+            #     r"\Gamma": GREEN
+            # }
+        ).scale(0.8).to_corner(UL)
+        eq_t[0][3].set_color(GREEN)
+        self.add_fixed_in_frame_mobjects(eq_t)
+        self.add_fixed_orientation_mobjects(gamma_t, ds_t)
+        self.move_camera(
+            zoom=0.9,
+            theta=220 * DEGREES,
+            frame_center=UP,
+            added_anims=[FadeIn(eq_t), Create(circle), Write(gamma_t), Create(ds), Write(ds_t)]
+        )
+        self.wait()
+
+        self.play(
+            eq_t[2].animate(rate_func=there_and_back, run_time=1.8).set_color("#FCBA03").scale(1.3),
+            circle.animate(rate_func=there_and_back, run_time=1.8).scale(1.4)
+        )
+        self.wait()
+        eq_t_flux = MathTex(
+            r"-\dv{\Phi_S(t)}{t}"
+        ).scale(0.8).next_to(eq_t[0], RIGHT)
+        self.add_fixed_in_frame_mobjects(eq_t_flux)
+        self.play(
+            FadeOut(eq_t[1:3]),
+            FadeIn(eq_t_flux),
+            # Transform(eq_t[1:3], eq_t_flux)
+        )
+        self.wait()
+
+        cos_axes = Axes(
+            x_range=[0, 4 * PI, PI],
+            y_range=[-2, 2, 2],
+            tips=False,
+            x_length=2.5,
+            y_length=1.6,
+            axis_config={"stroke_width": 4}
+        ).next_to(eq_t, DOWN, aligned_edge=LEFT, buff=LARGE_BUFF)
+
+        cos_axis_labels = cos_axes.get_axis_labels(
+            x_label=MathTex("t").scale(0.8),
+            y_label=MathTex(r"\Phi(t)", color="#FCBA03").scale(0.8)
+        )
+        self.add_fixed_in_frame_mobjects(cos_axes, cos_axis_labels)
+        self.play(
+            Create(cos_axes),
+            Write(cos_axis_labels)
+        )
+        self.wait()
+        cos_func = cos_axes.plot(
+            lambda t: np.cos(2 * t),
+            x_range=[0, 4 * PI],
+            color="#FCBA03"
+        )
+        self.add_fixed_in_frame_mobjects(cos_func)
+        self.begin_3dillusion_camera_rotation(rate=-0.05)
+        self.play(
+            t_vt.animate.set_value(8 * PI),
+            Create(cos_func),
+            rate_func=linear,
+            run_time=4 * PI
+        )
+        self.wait()
+
+        cos_func_l = cos_axes.plot(
+            lambda t: 2 / 1.3 * np.cos(2 * t),
+            x_range=[0, 4 * PI],
+            color="#FCBA03"
+        )
+        # self.add_fixed_in_frame_mobjects(cos_func_l)
+        self.play(
+            circle.animate.scale(2 / 1.3),
+            Transform(cos_func, cos_func_l),
+            run_time=2.5
+        )
+        self.wait()
+        self.play(
+            circle.animate.scale(1.5),
+            run_time=2
+        )
+        self.wait()
+        self.play(
+            circle.animate.scale(1 / 1.5),
+            run_time=1.5
+        )
+        d_arrow = Vector(DOWN).next_to(cos_axes, DOWN)
+        dt_t = MathTex(r"-\dv{}{t}").scale(0.8).next_to(d_arrow, LEFT)
+
+        sin_axes = Axes(
+            x_range=[0, 4 * PI, PI],
+            y_range=[-2, 2, 2],
+            tips=False,
+            x_length=2.5,
+            y_length=1.6,
+            axis_config={"stroke_width": 4}
+        ).next_to(cos_axes, DOWN, aligned_edge=LEFT, buff=1.6)
+
+        sin_axis_labels = sin_axes.get_axis_labels(
+            x_label=MathTex("t").scale(0.8),
+            y_label=MathTex("e", color=RED).scale(0.8)
+        )
+        self.add_fixed_in_frame_mobjects(d_arrow, dt_t, sin_axes, sin_axis_labels)
+        self.play(
+            Create(d_arrow),
+            FadeIn(dt_t),
+            Create(sin_axes),
+            Write(sin_axis_labels),
+            FadeOut(cos_func)
+        )
+        self.wait()
+
+        sin_func_l = sin_axes.plot(
+            lambda t: 2 / 1.3 * np.sin(2 * t),
+            x_range=[0, 4 * PI],
+            color=RED
+        )
+
+        e_length = 1.2
+        e_arrows = [
+            Arrow(
+                np.roll(cylindric_to_cartesian((2, theta, circle.get_center()[1])), 2),
+                np.roll(cylindric_to_cartesian((math.sqrt(4 + e_length**2), theta + np.arctan2(e_length, 4), circle.get_center()[1])), 2),
+                buff=0,
+                color=RED
+            )
+            for theta in np.linspace(0, TAU, 10)
+        ]
+
+        for arrow in e_arrows:
+            arrow.unit_vector = arrow.get_unit_vector()
+            arrow.add_updater(
+                lambda a: a.become(
+                    Arrow(
+                        a.get_start(),
+                        a.get_start() + np.sin(2 * t_vt.get_value()) * e_length * a.unit_vector,
+                        buff=0,
+                        color=RED
+                    )
+                )
+            )
+        
+        self.play(
+            *map(Create, e_arrows)
+        )
+
+        self.add_fixed_in_frame_mobjects(sin_func_l)
+        self.play(
+            t_vt.animate.set_value(12 * PI),
+            Create(cos_func),
+            Create(sin_func_l),
+            rate_func=linear,
+            run_time=4 * PI
+        )
+        self.wait()
+
+class ExplainCurl(ThreeDScene):
+    def construct(self):
+        self.set_camera_orientation(
+            phi=70 * DEGREES,
+            theta=30 * DEGREES
+        )
+
+        axes = ThreeDAxes(z_range=[-3, 3, 1]).set_stroke(width=0.5)
+        x_label = axes.get_x_axis_label(label=r"\overrightarrow{e_x}")
+        y_label = axes.get_y_axis_label(label=r"\overrightarrow{e_y}").shift(2 * UP)
+        z_label = axes.get_z_axis_label(label=r"\overrightarrow{e_z}", rotation=0, buff=LARGE_BUFF)
+        cartesian_base_t = VGroup(x_label, y_label, z_label)
+
+        fil = Line(10 * IN, 10 * OUT, stroke_width=6)
+        i_t = MathTex("I=").to_corner(UL)
+        amp_vt = ValueTracker(2)
+        amp_value = DecimalNumber(
+            number=2,
+            num_decimal_places=1,
+            include_sign=True,
+            # include_background_rectangle=True,
+            unit="A"
+        ).next_to(i_t, RIGHT)
+        amp_value.add_updater(lambda d: d.set_value(amp_vt.get_value()))
+
+        self.add_fixed_orientation_mobjects(x_label, y_label, z_label)
+        self.play(
+            Create(axes),
+            *map(Write, cartesian_base_t),
+            run_time=0.8
+        )
+        self.wait()
+        self.add_fixed_in_frame_mobjects(i_t, amp_value)
+
+        self.play(
+            Create(fil, run_time=3),
+            FadeIn(amp_value),
+            FadeIn(i_t)
+        )
+        amp_value.add_updater(lambda d: self.add_fixed_in_frame_mobjects(d))
+
+        def shift_arrow(arrow, dt):
+            if arrow.get_start()[2] >= 4:
+                arrow.move_to(-7 * Z_AXIS)
+            else:
+                arrow.move_to(arrow.get_center() + dt * Z_AXIS)
+        
+        i_arrows = [
+            Arrow(
+                start=(0, 0, z),
+                end=(0, 0, z + 2),
+                buff=0,
+                color=RED
+            )
+            for z in [-5, -2, 1, 4]
+        ]
+        self.play(*map(Create, i_arrows))
+        for arrow in i_arrows:
+            arrow.add_updater(shift_arrow)
+        self.wait(3)
+
+        def magnetic_field_func(p, i):
+            r = np.linalg.norm(p)
+            scaled_p = p / r
+            if r < 0.4:
+                return ORIGIN
+            else:
+                return np.array([i * (1/r**2) * scaled_p[1], -i * (1/r**2) * scaled_p[0], 0])
+
+        magnetic_field = ArrowVectorField(
+            func=lambda p: magnetic_field_func(p, amp_vt.get_value()),
+            y_range=[
+                math.floor(-config["frame_width"] / 2),
+                math.ceil(config["frame_width"] / 2)
+            ],
+            # length_func=lambda norm: 0.5 * sigmoid(norm)
+        )
+        self.play(
+            Create(magnetic_field)
+        )
+        self.wait(2)
+
+        self.move_camera(
+            phi=0,
+            theta=0,
+            run_time=1.7
+        )
+        for arrow in i_arrows:
+            arrow.clear_updaters()
+        self.wait()
+
+        circle = Circle(radius=0.28, color=WHITE)
+        circle.add(Dot(radius=0.02))
+        curl_norm_t = MathTex(
+            r"\Vert\overrightarrow{rot}\,\overrightarrow{B}\Vert="
+        )
+        curl_norm_t.move_to(UP).add_background_rectangle()
+        curl_value = DecimalNumber(
+            1,
+            num_decimal_places=1
+        )
+        curl_value.next_to(curl_norm_t, RIGHT).shift(0.08*DOWN)
+
+        self.add_fixed_in_frame_mobjects(curl_norm_t, curl_value)
+
+        self.play(
+            Create(circle),
+            FadeIn(curl_norm_t),
+            FadeIn(curl_value)
+        )
+        curl_value.add_updater(lambda d: d.set_value(amp_vt.get_value() / 2))
+        curl_value.add_updater(lambda d: self.add_fixed_in_frame_mobjects(d))
+        self.wait()
+
+        magnetic_field_l = ArrowVectorField(
+            func=lambda p: magnetic_field_func(p, 4 * amp_vt.get_value()),
+            y_range=[
+                math.floor(-config["frame_width"] / 2),
+                math.ceil(config["frame_width"] / 2)
+            ],
+            # length_func=lambda norm: 0.5 * sigmoid(norm)
+        )
+
+        self.play(
+            amp_vt.animate.set_value(4),
+            magnetic_field.animate.become(magnetic_field_l),
+            run_time=3
+        )
+        self.wait()
+
+        curl_value.clear_updaters()
+        self.play(
+            FadeOut(curl_norm_t),
+            FadeOut(curl_value)
+        )
+
+        for arrow in i_arrows:
+            arrow.add_updater(shift_arrow)
+        self.move_camera(
+            phi=70 * DEGREES,
+            theta=30 * DEGREES,
+            zoom=1.2
+        )
+        self.play(
+            *map(FadeOut, i_arrows),
+            FadeOut(fil)
+        )
+        self.wait()
+
+        magnetic_field_i = ArrowVectorField(
+            func=lambda p: magnetic_field_func(p, -4 * amp_vt.get_value()),
+            y_range=[
+                math.floor(-config["frame_width"] / 2),
+                math.ceil(config["frame_width"] / 2)
+            ],
+            # length_func=lambda norm: 0.5 * sigmoid(norm)
+        )
+
+        curl_vector = Arrow(ORIGIN, 2 * IN, buff=0)
+        curl_vector_t = MathTex(
+            r"\overrightarrow{rot}\,\overrightarrow{B}"
+        ).next_to(curl_vector.get_end(), OUT, buff=-0.6)
+        self.add_fixed_orientation_mobjects(curl_vector_t)
+        self.play(
+            Create(curl_vector),
+            Write(curl_vector_t)
+        )
+        self.wait()
+        self.play(
+            amp_vt.animate.set_value(-4),
+            curl_vector.animate.become(Arrow(ORIGIN, 2 * OUT, buff=0)),
+            magnetic_field.animate.become(magnetic_field_i),
+            curl_vector_t.animate.shift(5.2 * OUT),
+            run_time=3
+        )
+        self.wait()
+
+        self.play(
+            FadeOut(curl_vector),
+            FadeOut(curl_vector_t)
+        )
+
+        div_t = MathTex(
+            r"div\,\overrightarrow{B}=0"
+        ).move_to(UP).add_background_rectangle()
+
+        self.move_camera(
+            phi=0,
+            theta=0,
+            run_time=1.7
+        )
+
+        self.add_fixed_in_frame_mobjects(div_t)
+        self.play(
+            FadeIn(div_t)
+        )
+        self.wait()
+        self.play(
+            circle.animate.move_to(3 * UP),
+            div_t.animate.shift(2 * RIGHT)
+        )
+
+        arrows_div = [
+            Vector(
+                0.7 * LEFT,
+                color=RED,
+                stroke_width=6
+            ).move_to(circle.get_center() + 0.8 * RIGHT + offset * UP)
+            for offset in [-0.3, 0, 0.3]
+        ]
+
+        self.play(
+            *map(Create, arrows_div),
+            run_time=0.5
+        )
+        self.play(
+            *[arrow.animate.shift(0.5 * LEFT) for arrow in arrows_div],
+            run_time=0.5
+        )
+        self.play(
+            *map(FadeOut, arrows_div),
+            run_time=0.5
+
+        )
+        for arrow in arrows_div:
+            arrow.shift(0.5 * LEFT)
+        self.play(
+            *map(Create, arrows_div),
+            run_time=0.5
+        )
+        self.play(
+            *[arrow.animate.shift(0.5 * LEFT) for arrow in arrows_div],
+            run_time=0.5
+        )
+        self.play(
+            *map(FadeOut, arrows_div),
+            run_time=0.5
+        )
+        self.wait()
+
+        self.move_camera(
+            phi=70 * DEGREES,
+            theta=30 * DEGREES,
+            frame_center=2 * UP,
+            added_anims=[
+                FadeOut(circle),
+                FadeOut(div_t)
+            ]
+        )
+        self.wait()
+
+        prism = Prism(
+            dimensions=[2.5, 5, 2],
+            fill_color=BLUE_E,
+            stroke_width=2,
+            fill_opacity=0.5
+        ).move_to(1.75 * UP)
+
+        prism_t = MathTex(
+            r"\mathscr{P}=\{S_1, \dots, S_6\}"
+        ).to_corner(UR)
+
+        self.begin_ambient_camera_rotation()
+
+        self.add_fixed_in_frame_mobjects(prism_t)
+        self.play(
+            Write(prism_t),
+            FadeOut(i_t)
+        )
+        self.wait()
+        surfaces_t_loc = [[-1, 2, 0.7], [0, -1, 0], [1, 2, 0.7], [0, 5, 1], [0, 3, 2], [0, 3, -2]]
+        surfaces_t = [MathTex(f"S_{i}").move_to(p) for i, p in enumerate(surfaces_t_loc, start=1)]
+
+        for i, t in zip([2, 5, 3, 4, 1, 0], surfaces_t):
+            self.add_fixed_orientation_mobjects(t)
+            self.play(
+                Create(prism[i]),
+                Write(t),
+                run_time=0.7
+            )
+            if i == 4:
+                self.wait(1)
+        self.stop_ambient_camera_rotation()
+        
+        flux_t = MathTex(
+            r"\Phi_{\mathscr{P}}(\overrightarrow{B})=\Phi_{S_1}+\Phi_{S_2}+\Phi_{S_3}+\Phi_{S_4}+\Phi_{S_5}+\Phi_{S_6}"
+        ).to_corner(UL)
+        self.add_fixed_in_frame_mobjects(flux_t)
+        self.move_camera(
+            theta=90 * DEGREES,
+            run_time=2,
+            added_anims=[
+                FadeIn(flux_t, run_time=0.7)
+            ]
+        )
+        self.wait()
+
