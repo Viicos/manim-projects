@@ -19,9 +19,13 @@ The code isn't consistently updated to work with the latest version of Manim, so
 Here's a sneak peek of the created videos so far:
 
 <details><summary>Video explaining symmetries with a theta based distribution:</summary>
+  
 https://user-images.githubusercontent.com/65306057/154807933-cab1adf4-d19d-4d47-a186-b669923bf7a6.mp4
+  
 </details>
 
 <details><summary>Video explaining curl and divergence:</summary>
+  
 https://user-images.githubusercontent.com/65306057/154808148-ba9da016-17bb-41a1-9200-ff32f88639f2.mp4
+
 </details>
